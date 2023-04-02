@@ -1,8 +1,9 @@
 from urllib.request import urlopen
 from html.parser import HTMLParser
 from dataclasses import dataclass
-from calendar import month_abbr
+import calendar
 import re
+import datetime
 
 
 AOE_liquipedia_prefix = "https://liquipedia.net"
@@ -18,7 +19,7 @@ class Tournament:
     prize: str = None
     participants_number: str = None
     location: str = None
-    live: bool = False
+    live: str = None
     winner: str = None
     runner_up: str = None
 
@@ -29,6 +30,7 @@ class Game:
     team_2: str = None
     time: str = None
     stage: str = None
+    live: str = None
 
 
 class MainPageParser(HTMLParser):
@@ -66,7 +68,26 @@ class MainPageParser(HTMLParser):
                 self.TOURNAMENTS[-1].location = location[1]
 
     def is_live(self, data):
-        return True
+        def to_local_datetime(utc_dt):
+            return datetime.datetime.fromtimestamp(calendar.timegm(utc_dt.timetuple()))
+        days = re.findall(re.compile(r'[\s,-](\d{2})[\s,-]'), data)
+        days = days if len(days) == 2 else days*2
+        years = re.findall(re.compile(r'(\d{4})'), data)
+        years = years*2 if len(years) == 1 else years
+        monthes = [list(calendar.month_abbr).index(word) for word in data.split() if word in list(calendar.month_abbr)[1:]]
+        monthes = monthes*2 if len(monthes) == 1 else monthes
+
+        start_datetime = datetime.datetime.strptime(f'{days[0]}.{monthes[0]}.{years[0][2:]}', '%d.%m.%y')
+        finish_datetime = datetime.datetime.strptime(f'{days[1]}.{monthes[1]}.{years[1][2:]}', '%d.%m.%y')
+        start_datetime_local = to_local_datetime(start_datetime)
+        finish_datetime_local = to_local_datetime(finish_datetime)
+        now = datetime.datetime.now()
+        if (now > start_datetime_local) and (now < finish_datetime_local):
+            return "LIVE!"
+        elif (now < start_datetime_local) and (now < finish_datetime_local):
+            return "Soon..."
+        elif (now > start_datetime_local) and (now > finish_datetime_local):
+            return "Finished"
 
     def handle_data(self, data):
         if (self.tagStack[-2:] == ['b', 'a']):
@@ -76,9 +97,8 @@ class MainPageParser(HTMLParser):
         if self.date_flag:
             self.dates.append(data)
             self.TOURNAMENTS[-1].date = data
+            self.TOURNAMENTS[-1].live = self.is_live(data)
             self.date_flag = False
-            if self.is_live(data):
-                self.TOURNAMENTS[-1].live = True
 
         if self.prize_flag:
             self.prizes.append(data)
@@ -126,7 +146,6 @@ class MainPageParser(HTMLParser):
             elif (attrs == [("class", "divCell Placement SecondPlace")]):
                 self.runner_up_flag = True
             self.handle_tourhament_data(tag, attrs)
-#        if self.tagStack: print(self.tagStack)           # PRINT MAIN tagStack
 
     def handle_endtag(self, endTag):
         if (self.tagStack) and (endTag == self.tagStack[-1]):
@@ -137,8 +156,9 @@ class TournamentPageParser(HTMLParser):
     def __init__(self, site_name, *args, **kwargs):
         self.tagStack = []
         self.GAMES = []
-        self.team_1 = self.team_2 = self.stages = self.times = []
-        self.team_1_flag = self.team_2_flag = self.time_flag = self.stage_flag = False
+        self.team_1 = self.team_2 = self.stage = self.time = []
+        self.team_1_flag = self.team_2_flag = self.time_flag = False
+        self.stage_flag = self.flag_flag = False
         self.site_name = site_name
         super().__init__(*args, **kwargs)
         self.feed(self.read_site_content())
@@ -146,29 +166,53 @@ class TournamentPageParser(HTMLParser):
     def read_site_content(self):
         return str(urlopen(self.site_name).read())
 
-    def handle_game_data(self, tag, attrs):
-        if (tag == 'span') and attrs and len(attrs) == 2:
-            team_1 = attrs[0][1]
-            print("HERE team 1")
-            print("TEAM1: ", team_1)
-            self.team_1.append(team_1)
-            self.GAMES[-1].team_1 = team_1
-            self.team_1_flag = False
+    def is_live(self, data):
+        days = re.findall(re.compile(r'[\s,-](\d{2})[\s,-]'), data)
+        years = re.findall(re.compile(r'(\d{4})'), data)
+        monthes = [list(calendar.month_abbr).index(word[:3]) for word in data.split() if word in list(calendar.month_abbr)[1:]]
+        time = re.findall(re.compile(r'(\d{2}:\d{2})'), data)
+        print(days, monthes, years, time)
+        start_datetime = datetime.datetime.strptime(f'{days[0]}.{monthes[0]}.{years[0][2:]}', '%d.%m.%y')
+        start_timestamp = datetime.datetime.timestamp(start_datetime)
+        finish_timestamp = start_timestamp
+        now = datetime.datetime.timestamp(datetime.datetime.now())
+        if (now > start_timestamp) and (now < finish_timestamp):
+            return "LIVE!"
+        elif (now < finish_timestamp) and (now < finish_timestamp):
+            return "Soon..."
+        elif (now > finish_timestamp) and (now > finish_timestamp):
+            return "Finished"
 
-        if (tag == 'span') and attrs and len(attrs) == 2 and (attrs[0][0] == 'data-highlightingclass') and (attrs[1][0] == 'class') and self.team_2_flag:
-            team_2 = attrs[0][1]
-            print("HERE team 2")
-            print("TEAM2: ", team_2)
-            self.team_2.append(team_2)
-            self.GAMES[-1].team_2 = team_2
-            self.team_2_flag = False
+    def handle_game_data(self, tag, attrs):
+        if self.team_1_flag and (tag == 'a') and attrs and (attrs[0][0] == 'href') and (attrs[-1][0] == 'title'):
+            if not (self.flag_flag):
+                team_1 = attrs[-1][1] if ('(page does not exist)' not in attrs[-1][1]) else attrs[-1][1][:-22]
+#               print("HERE team 1")
+#               print("TEAM1: ", team_1)
+                self.team_1.append(team_1)
+                self.GAMES[-1].team_1 = team_1
+                self.team_1_flag = False
+            else:
+                self.flag_flag = False
+
+        if self.team_2_flag and (tag == 'a') and attrs and (attrs[0][0] == 'href') and (attrs[-1][0] == 'title'):
+            if not (self.flag_flag):
+                team_2 = attrs[-1][1] if ('(page does not exist)' not in attrs[-1][1]) else attrs[-1][1][:-22]
+                self.team_2.append(team_2)
+                self.GAMES[-1].team_2 = team_2
+                self.team_2_flag = False
+            else:
+                self.flag_flag = False
 
     def handle_data(self, data):
         if self.time_flag:
-            print("HERE time")
-            print("TIME: ", data)
-            self.times.append(data)
+            data = data.strip()
+#            print("HERE time")
+#            print("TIME: ", data)
+            self.time.append(data)
             self.GAMES[-1].time = data
+#            self.GAMES[-1].live = self.is_live(data)
+            self.time_flag = False
 
     def handle_starttag(self, tag, attrs):
         if (not self.tagStack) and (tag == 'table') and (attrs == [("class", "wikitable wikitable-striped infobox_matches_content")]):
@@ -181,9 +225,11 @@ class TournamentPageParser(HTMLParser):
 
             if (attrs == [("class", "team-left")]):
                 self.team_1_flag = True
+            if (attrs == [("class", "flag")]):
+                self.flag_flag = True
             elif (attrs == [("class", "team-right")]):
                 self.team_2_flag = True
-            elif (attrs == [("class", "timer-object timer-object-countdown-only")]):
+            elif ("class", "timer-object timer-object-countdown-only") in attrs:
                 self.time_flag = True
             self.handle_game_data(tag, attrs)
 #        if self.tagStack: print(self.tagStack)           # PRINT MAIN tagStack
@@ -197,10 +243,13 @@ class TournamentPageParser(HTMLParser):
 def main():
     tournaments = MainPageParser(AOE_liquipedia_URL)
     for tour in tournaments.TOURNAMENTS:
-        print(tour.title)
-        games = TournamentPageParser(tour.link)
-        for game in games.GAMES:
-            print(game, '\n\n')
+        if tour.live == "LIVE!":
+            print(tour.title,  tour.live, '\n')
+            games = TournamentPageParser(tour.link)
+            for game in games.GAMES:
+                print(game, '\n\n')
+        else:
+            print(tour.title, tour.live, '\n')
 
 if __name__ == "__main__":
     main()
