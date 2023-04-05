@@ -27,7 +27,6 @@ class Tournament:
 class Game:
     team_1: str = None
     team_2: str = None
-    time: str = None
     stage: str = None
     start_datetime_local: datetime = None
     finish_datetime_local: datetime = None
@@ -40,14 +39,17 @@ class MainPageParser(HTMLParser):
         self.TOURNAMENTS = []
         self.AOE_liquipedia_prefix = "https://liquipedia.net"
         self.AOE_liquipedia_URL = self.AOE_liquipedia_prefix + "/ageofempires/Age_of_Empires_II"
-        self._location_flag = self._participants_flag = self._runner_up_flag = False
-        self._date_flag = self._prize_flag = self._winner_flag = False
-        self.site_name = self.AOE_liquipedia_URL
+        self._location_flag = False
+        self._participants_flag = False
+        self._runner_up_flag = False
+        self._date_flag = False
+        self._prize_flag = False
+        self._winner_flag = False
         super().__init__(*args, **kwargs)
         self.feed(self.read_site_content())
 
     def read_site_content(self):
-        return str(urlopen(self.site_name).read())
+        return str(urlopen(self.AOE_liquipedia_URL).read())
 
     def __handle_tourhament_data(self, tag, attrs):
         if (tag == 'a') and (self._tagStack[-2] == 'b'):
@@ -140,9 +142,11 @@ class TournamentPageParser(HTMLParser):
     def __init__(self, site_name, *args, **kwargs):
         self._tagStack = []
         self.GAMES = []
-#        self.team_1 = self.team_2 = self.stage = self.time = []
-        self._team_1_flag = self._team_2_flag = self._time_flag = False
-        self._stage_flag = self._flag_flag = False
+        self._team_1_flag = False
+        self._team_2_flag = False
+        self._time_flag = False
+        self._stage_flag = False
+        self._flag_flag = False
         self.site_name = site_name
         super().__init__(*args, **kwargs)
         self.feed(self.__read_site_content())
@@ -198,11 +202,10 @@ class TournamentPageParser(HTMLParser):
     def handle_data(self, data):
         if self._time_flag:
             data = data.strip()
-            self.GAMES[-1].time = data
             self.GAMES[-1].start_datetime_local, self.GAMES[-1].finish_datetime_local = self.__start_finish_datetime(data)
             self._time_flag = False
         else:
-            if self.GAMES and self.GAMES[-1].team_1 and self.GAMES[-1].team_2 and self.GAMES[-1].time and not self.GAMES[-1].stage:
+            if self.GAMES and self.GAMES[-1].team_1 and self.GAMES[-1].team_2 and not self.GAMES[-1].stage:
                 possible_stages = ["round of 32", "round of 16", "playoffs", "finals",
                                    "semifinals", "quaterfinals", "double elimination stage",
                                    "single-elimination stage", "group stage"]
@@ -237,11 +240,11 @@ class MainContainerManager:
     def __init__(self, tournaments):
         self.tournaments = tournaments
         self.all_tournaments_dict, self.all_tournaments, self.all_games = self.__get_main_containers()
-        self.nearest_game = self.__sort_by_starttime()
 
     def __get_main_containers(self):
         all_tournaments_dict = {}
-        all_tournaments = all_games = []
+        all_tournaments = []
+        all_games = []
         for tournament in self.tournaments.TOURNAMENTS:
             all_tournaments.append(tournament)
             games = TournamentPageParser(tournament.link)
@@ -251,5 +254,6 @@ class MainContainerManager:
         all_tournaments = self.__sort_by_starttime(all_tournaments)
         return all_tournaments_dict, all_tournaments, all_games
 
-    def __sort_by_starttime(self):
-        return self.all_games.sort(key=lambda x: x.start_datetime_local)
+    def __sort_by_starttime(self, list_to_sort):
+        list_to_sort.sort(key=lambda x: x.start_datetime_local)
+        return list_to_sort
