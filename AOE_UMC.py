@@ -237,25 +237,19 @@ class MainContainerManager:
     def __init__(self, tournaments):
         self.tournaments = tournaments
         self.all_tournaments_dict, self.all_tournaments, self.all_games = self.__get_main_containers()
-        self.nearest_game = self.__get_the_nearest_game()
+        self.nearest_game = self.__sort_by_starttime()
 
     def __get_main_containers(self):
         all_tournaments_dict = {}
-        all_tournaments = []
-        all_games = []
+        all_tournaments = all_games = []
         for tournament in self.tournaments.TOURNAMENTS:
             all_tournaments.append(tournament)
             games = TournamentPageParser(tournament.link)
             all_tournaments_dict[tournament] = games.GAMES
             all_games += games.GAMES
+        all_games = self.__sort_by_starttime(all_games)
+        all_tournaments = self.__sort_by_starttime(all_tournaments)
         return all_tournaments_dict, all_tournaments, all_games
 
-    def __get_the_nearest_game(self):
-        local_datetime_now = datetime.now()
-        min_time_delta = timedelta(10, 0, 0, 0, 0, 0, 0)
-        for game in self.all_games:
-            time_delta = game.start_datetime_local - local_datetime_now
-            if time_delta < min_time_delta:
-                min_time_delta = time_delta
-                nearest_game = game
-        return nearest_game
+    def __sort_by_starttime(self):
+        return self.all_games.sort(key=lambda x: x.start_datetime_local)
