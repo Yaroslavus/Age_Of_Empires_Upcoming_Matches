@@ -1,110 +1,100 @@
 import tkinter as tk
-import AOE_UMC
-from datetime import datetime
-from colorama import Fore, Style
-import time
+from datetime import datetime, timedelta
 from tkinter.messagebox import askyesno
+import AOE_UMC
 
 
-class UpcomingMatchesViewer(tk.LabelFrame):
-    def __init__(self, *args, **kwargs):
-        tk.LabelFrame.__init__(self, text = "Age Of Empires 2 Upcoming Matches", *args, **kwargs)
-        self.tournaments = AOE_UMC.MainPageParser()
-        self.main_container = AOE_UMC.MainContainerManager(self.tournaments)
-        self.row = 0
+class UpcomingMatchesViewer(tk.Tk):
+    def __init__(self):
+        tk.Tk.__init__(self)
         self.winfo_toplevel().title("Age Of Empires 2 Upcoming Matches")
-        self.grid_columnconfigure(1, weight=1)
-        refresh_button = tk.Button(self, text="Refresh all Information (takes about 30 sec)")
-        refresh_button.grid(row=0, column=4, sticky="w")
-        tk.Label(self, text="Upcoming Tournaments:", anchor="w").grid(row=1, column=0, sticky="ew")
-        tk.Label(self).grid(row=2, column=0, sticky="ew", columnspan=4)
-        self.row = 3
+        self.main_frame = tk.LabelFrame(self, text="Age Of Empires 2 Upcoming Matches")
+        self.main_frame.pack(side="top", fill="both", expand=True, padx=10, pady=10)
+        self.refresh_button = tk.Button(self.main_frame, text="Refresh all Information (takes about 30 sec)", command=lambda: self.__manual_refresh())
+        self.refresh_button.pack(side="top", padx=10, pady=10, anchor='nw')
+        self.upcoming_tournaments_frame = tk.LabelFrame(self.main_frame, text="Upcoming tournaments")
+        self.upcoming_tournaments_frame.pack(side="top", fill="both", expand=True, padx=10, pady=10)
+        self.live_tournaments_frame = tk.LabelFrame(self.main_frame, text="Live tournaments")
+        self.live_tournaments_frame.pack(side="top", fill="both", expand=True, padx=10)
+        self.__timed_refresh()
+
+    def __manual_refresh(self):
+        if askyesno(title="Full Refreshing", message="Do you really want to refresh the form?"):
+            self.__refresh()
+
+    def __refresh(self):
+        self.upcoming_tournaments_frame.destroy()
+        self.live_tournaments_frame.destroy()
+        self.upcoming_tournaments_frame = tk.LabelFrame(self.main_frame, text="Upcoming tournaments")
+        self.upcoming_tournaments_frame.pack(side="top", fill="both", expand=True, padx=10, pady=10)
+        self.live_tournaments_frame = tk.LabelFrame(self.main_frame, text="Live tournaments")
+        self.live_tournaments_frame.pack(side="top", fill="both", expand=True, padx=10)
+        self.main_container = AOE_UMC.MainContainerManager(AOE_UMC.MainPageParser())
         self.__fill_upcoming_tournaments()
-        tk.Label(self).grid(row=self.row, column=0, sticky="ew", columnspan=4)
-        self.row += 1
-        tk.Label(self).grid(row=self.row, column=0, sticky="ew", columnspan=4)
-        tk.Label(self, text="Live Tournaments:", anchor="w").grid(row=self.row + 1, column=0, sticky="ew")
-        tk.Label(self).grid(row=self.row + 2, column=0, sticky="ew", columnspan=4)
-        self.row += 3
-        tk.Label(self, text="Tournament", anchor="w").grid(row=self.row, column=0, sticky="ew")
-        tk.Label(self, text="Game", anchor="w").grid(row=self.row, column=1, sticky="ew")
-        tk.Label(self, text="Start Local Time", anchor="w").grid(row=self.row, column=2, sticky="ew")
-        tk.Label(self, text="Activity Status", anchor="w").grid(row=self.row, column=3, sticky="ew")
-        tk.Label(self, text="Stage", anchor="w").grid(row=self.row, column=4, sticky="ew")
-        self.row += 2
         self.__fill_live_tournaments()
 
-    def __activity_status(self, object, game_flag=1):
-        now = datetime.now()
-        if (now > object.start_datetime_local) and (now < object.finish_datetime_local):
-            return "LIVE!"
-        elif (now < object.start_datetime_local):
-            return "Soon"
-        elif (now > object.finish_datetime_local):
-            return "Started more than 4 hours ago" if game_flag else "Finished"
-
-    def full_refresh(self):
-        if askyesno(title="Full Refreshing", message="Do you really want to refresh the form?"):
-            self.update()
-#            refresh_label = tk.Label(self, text="Refreshing...", anchor="w")
-#            refresh_label.grid(row=0, column=2, sticky="w")
-#            time.sleep(2)
-#            UpcomingMatchesViewer(root).pack(side="top", fill="both", expand=True, padx=10, pady=10)
-#            refresh_label = tk.Label(self, text="Refreshed", anchor="w")
-#            refresh_label.grid(row=0, column=2, sticky="w")
-#            time.sleep(0.5)
-#            tk.Label(self).grid(row=2, column=0, sticky="ew", columnspan=4)
-        else:
-            pass
+    def __timed_refresh(self):
+        self.after(60000, self.__timed_refresh)
+        self.__refresh()
 
     def __fill_upcoming_tournaments(self):
-        for tournament in self.main_container.all_tournaments_dict.keys():
+        upcoming_tournaments_iterator = 0
+        for row, tournament in enumerate(self.main_container.all_tournaments_dict.keys()):
             if self.__activity_status(tournament, 0) == "Soon":
                 start_time_local = tournament.start_datetime_local.strftime("%d.%m.%y")
                 timedelta = self.__td_format(tournament.start_datetime_local - datetime.now(), game_flag=0)
-                tournament_title = tk.Label(self, text=f'{tournament.title}\t{tournament.tier}', anchor="w")
-                tournament_tier = tk.Label(self, text=f'{start_time_local}', anchor="w")
-                tournament_date = tk.Label(self, text=f'{timedelta}', anchor="w")
-                tournament_title.grid(row=self.row, column=0, sticky="ew")
-                tournament_tier.grid(row=self.row, column=2, sticky="ew")
-                tournament_date.grid(row=self.row, column=3, sticky="ew")
-        self.row += 1
+                tournament_title = tk.Label(self.upcoming_tournaments_frame, text=f'{tournament.title}\t{tournament.tier}', anchor="w")
+                tournament_tier = tk.Label(self.upcoming_tournaments_frame, text=f'{start_time_local}', anchor="w")
+                tournament_date = tk.Label(self.upcoming_tournaments_frame, text=f'{timedelta}', anchor="w")
+                tournament_title.grid(row=row, column=0, sticky="ew")
+                tournament_tier.grid(row=row, column=2, sticky="ew")
+                tournament_date.grid(row=row, column=3, sticky="ew")
+                upcoming_tournaments_iterator += 1
+        if not upcoming_tournaments_iterator:
+            self.no_upcoming_tours_label = tk.Label(self.upcoming_tournaments_frame, text="There are no any upcoming tournaments.")
+            self.no_upcoming_tours_label.grid(row=0, column=0, sticky='nsew')
 
     def __fill_live_tournaments(self):
-        for tournament, games_list in self.main_container.all_tournaments_dict.items():
+        live_tournaments_frames = []
+        live_tournaments_iterator = 0
+        for row, (tournament, games_list) in enumerate(self.main_container.all_tournaments_dict.items()):
             if self.__activity_status(tournament, 0) == "LIVE!":
-                tournament_title = tk.Label(self, text=tournament.title, anchor="w")
-                tournament_tier = tk.Label(self, text=tournament.tier, anchor="w")
-                tournament_date = tk.Label(self, text=tournament.date, anchor="w")
-                tournament_title.grid(row=self.row, column=0, sticky="ew")
-                tournament_tier.grid(row=self.row + 1, column=0, sticky="ew")
-                tournament_date.grid(row=self.row + 2, column=0, sticky="ew")
-                for game in games_list:
-                    start_time_local = game.start_datetime_local.strftime("%d.%m.%y %H:%M")
-                    if self.__activity_status(game, 1)  == "LIVE!":
-                        game_title = tk.Label(self, text=f'{game.team_1} vs. {game.team_2}', anchor="w")
-                        game_time = tk.Label(self, text=f'{start_time_local}', anchor="w")
-                        game_activity_status = tk.Label(self, text="LIVE!", anchor="w", bg='red')
-                        game_stage = tk.Label(self, text=f'{game.stage}', anchor="w")
-                        game_title.grid(row=self.row, column=1, sticky="ew")
-                        game_time.grid(row=self.row, column=2, sticky="ew")
-                        game_activity_status.grid(row=self.row, column=3, sticky="ew")
-                        game_stage.grid(row=self.row, column=4, sticky="ew")
-                        self.row += 1
-                    elif self.__activity_status(game, 1)  == "Soon":
-                        timedelta = self.__td_format(game.start_datetime_local - datetime.now())
-                        game_title = tk.Label(self, text=f'{game.team_1} vs. {game.team_2}', anchor="w")
-                        game_time = tk.Label(self, text=f'{start_time_local}', anchor="w")
-                        game_activity_status = tk.Label(self, text=f'{timedelta}', anchor="w", bg='lightblue')
-                        game_stage = tk.Label(self, text=f'{game.stage}', anchor="w")
-                        game_title.grid(row=self.row, column=1, sticky="ew")
-                        game_time.grid(row=self.row, column=2, sticky="ew")
-                        game_activity_status.grid(row=self.row, column=3, sticky="ew")
-                        game_stage.grid(row=self.row, column=4, sticky="ew")
-                        self.row += 1
-                self.row = self.row if len(games_list) >= 3 else self.row + 3
-                tk.Label(self).grid(row=self.row, column=0, sticky="ew", columnspan=4)
-                self.row += 1
+                live_tournament_frame = tk.LabelFrame(self.live_tournaments_frame, text=f'{tournament.title}\t{tournament.date}\t{tournament.tier}')
+                live_tournament_frame.grid(row=row, column=0, sticky='nsew')
+                live_tournaments_iterator += 1
+                live_tournaments_frames.append(live_tournament_frame)
+                self.__fill_live_tournament_with_games(games_list, live_tournament_frame)
+        if not live_tournaments_iterator:
+            self.no_live_tours_label = tk.Label(self.live_tournaments_frame, text="There are no any live tournaments.")
+            self.no_live_tours_label.grid(row=0, column=0, sticky='nsew')
+
+    def __fill_live_tournament_with_games(self, games_list, live_tournament_frame):
+        game_iterator = 0
+        for row, game in enumerate(games_list):
+            start_time_local = game.start_datetime_local.strftime("%d.%m.%y %H:%M")
+            if self.__activity_status(game, 1)  == "LIVE!":
+                game_title = tk.Label(live_tournament_frame, text=f'{game.team_1} vs. {game.team_2}', anchor="w")
+                game_time = tk.Label(live_tournament_frame, text=f'{start_time_local}', anchor="w")
+                game_activity_status = tk.Label(live_tournament_frame, text="LIVE!", anchor="w", bg='red')
+                game_stage = tk.Label(live_tournament_frame, text=f'{game.stage}', anchor="w")
+                game_title.grid(row=row, column=1, sticky="ew")
+                game_time.grid(row=row, column=2, sticky="ew")
+                game_activity_status.grid(row=row, column=3, sticky="ew")
+                game_stage.grid(row=row, column=4, sticky="ew")
+            elif self.__activity_status(game, 1)  == "Soon":
+                timedelta = self.__td_format(game.start_datetime_local - datetime.now())
+                game_title = tk.Label(live_tournament_frame, text=f'{game.team_1} vs. {game.team_2}', anchor="w")
+                game_time = tk.Label(live_tournament_frame, text=f'{start_time_local}', anchor="w")
+                game_activity_status = tk.Label(live_tournament_frame, text=f'{timedelta}', anchor="w", bg='lightblue')
+                game_stage = tk.Label(live_tournament_frame, text=f'{game.stage}', anchor="w")
+                game_title.grid(row=row, column=1, sticky="ew")
+                game_time.grid(row=row, column=2, sticky="ew")
+                game_activity_status.grid(row=row, column=3, sticky="ew")
+                game_stage.grid(row=row, column=4, sticky="ew")
+            game_iterator += 1
+        if not game_iterator:
+            self.no_live_games_label = tk.Label(live_tournament_frame, text="There are no any live games.")
+            self.no_live_games_label.grid(row=0, column=0, sticky='nsew')
 
     def __td_format(self, td_object, game_flag=1):
         seconds = int(td_object.total_seconds())
@@ -127,8 +117,18 @@ class UpcomingMatchesViewer(tk.LabelFrame):
 
         return ", ".join(strings)
 
+    def __activity_status(self, object, game_flag=1):
+        now = datetime.now()
+        if (now > object.start_datetime_local) and (now < object.finish_datetime_local):
+            return "LIVE!"
+        elif (now < object.start_datetime_local):
+            return "Soon"
+        elif (now > object.finish_datetime_local):
+            return "Started more than 4 hours ago" if game_flag else "Finished"
+
 
 if __name__ == "__main__":
-    root = tk.Tk()
-    UpcomingMatchesViewer(root).pack(side="top", fill="both", expand=True, padx=10, pady=10)
-    root.mainloop()
+#    root = tk.Tk()
+#    UpcomingMatchesViewer(root).pack(side="top", fill="both", expand=True, padx=10, pady=10)
+#    root.mainloop()
+    UpcomingMatchesViewer().mainloop()
