@@ -255,5 +255,6 @@ class MainContainerManager:
         return all_tournaments_dict, all_tournaments, all_games
 
     def __sort_by_starttime(self, list_to_sort):
-        list_to_sort.sort(key=lambda x: x.start_datetime_local)
+# Sort in the DESCENT order. So the nearest game is in the end of the list
+        list_to_sort.sort(key=lambda x: x.start_datetime_local, reverse=True)
         return list_to_sort
