@@ -8,8 +8,9 @@ import re
 from datetime import datetime, timedelta
 
 
-@dataclass(unsafe_hash=True)
+@dataclass
 class Tournament:
+    tournament_hash_list = iter(range(100, 200))
     tier: str = None
     title: str = None
     date: str = None
@@ -21,16 +22,20 @@ class Tournament:
     runner_up: str = None
     start_datetime_local: datetime = None
     finish_datetime_local: datetime = None
+    def __hash__(self):
+        return next(self.tournament_hash_list)
 
 
 @dataclass
 class Game:
+    game_hash_list = iter(range(200, 500))
     team_1: str = None
     team_2: str = None
     stage: str = None
     start_datetime_local: datetime = None
     finish_datetime_local: datetime = None
-
+    def __hash__(self):
+        return next(self.game_hash_list)
 
 class MainPageParser(HTMLParser):
 

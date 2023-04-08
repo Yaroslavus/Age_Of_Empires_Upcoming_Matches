@@ -9,6 +9,7 @@ class UpcomingMatchesViewer(tk.Tk):
         tk.Tk.__init__(self)
         self.master_frames_border_width = 2
         self.slave_frames_border_width = 0
+        self.time_to_next_refresh = float("inf")
         self.winfo_toplevel().title("Age Of Empires 2 Upcoming Matches")
         self.main_frame = tk.LabelFrame(self, text="Age Of Empires 2 Upcoming Matches", bd=self.master_frames_border_width)
         self.main_frame.pack(side="top", fill="both", expand=True, padx=10, pady=10)
@@ -20,13 +21,13 @@ class UpcomingMatchesViewer(tk.Tk):
         self.live_tournaments_frame.pack(side="top", fill="both", expand=True, padx=10)
 #        self.finished_tournaments_frame = tk.LabelFrame(self.main_frame, text="Finished tournaments", bd=self.master_frames_border_width)
 #        self.finished_tournaments_frame.pack(side="top", fill="both", expand=True, padx=10, pady=10)
-        self.__timed_refresh()
+        self.__large_period_refresh()
 
     def __manual_refresh(self):
         if askyesno(title="Full Refreshing", message="Do you really want to refresh the form?"):
-            self.__refresh()
+            self.__full_refresh()
 
-    def __refresh(self):
+    def __full_refresh(self):
         self.upcoming_tournaments_frame.destroy()
         self.live_tournaments_frame.destroy()
         self.upcoming_tournaments_frame = tk.LabelFrame(self.main_frame, text="Upcoming tournaments")
@@ -34,17 +35,37 @@ class UpcomingMatchesViewer(tk.Tk):
         self.live_tournaments_frame = tk.LabelFrame(self.main_frame, text="Live tournaments")
         self.live_tournaments_frame.pack(side="top", fill="both", expand=True, padx=10)
         self.main_container = AOE_UMC.MainContainerManager(AOE_UMC.MainPageParser())
+        self.nearest_game, self.nearest_tournament = self.main_container.all_games[-1], self.main_container.all_tournaments[-1]
+        self.time_to_next_refresh = int((self.nearest_game.finish_datetime_local - datetime.now()).total_seconds())
+        self.countdown_upcoming_tournaments_labels = []
+        self.countdown_upcoming_tournaments = []
+        self.countdown_games_labels = []
+        self.countdown_games = []
         self.__fill_upcoming_tournaments()
         self.__fill_live_tournaments()
+        self.__small_period_refresh()
 
-    def __timed_refresh(self):
-        self.after(60000, self.__timed_refresh)
-        self.__refresh()
+    def __large_period_refresh(self):
+        self.after(min(12*3600000, self.time_to_next_refresh*1000), self.__large_period_refresh)
+        self.__full_refresh()
+
+    def __small_period_refresh(self):
+        self.after(1000, self.__small_period_refresh)
+        for game, countdown_label in list(zip(self.countdown_games, self.countdown_games_labels)):
+            if (self.__activity_status(game, 1) == "LIVE!") and (countdown_label.cget("text") != "LIVE!"):
+                countdown_label.config(text = "LIVE!")
+            elif self.__activity_status(game, 1)  == "Soon":
+                timedelta = self.__td_format(game.start_datetime_local - datetime.now())
+                countdown_label.config(text = f'{timedelta}')
+        for upcoming_tournament, upcoming_tournament_countdown_label in list(zip(self.countdown_upcoming_tournaments, self.countdown_upcoming_tournaments_labels)):
+                timedelta = self.__td_format(upcoming_tournament.start_datetime_local - datetime.now())
+                upcoming_tournament_countdown_label.config(text = f'{timedelta}')
 
     def __fill_upcoming_tournaments(self):
         upcoming_tournaments_counter = 0
         for row, tournament in enumerate(self.main_container.all_tournaments_dict.keys()):
             if self.__activity_status(tournament, 0) == "Soon":
+                self.countdown_upcoming_tournaments.append(tournament)
                 upcoming_tournaments_counter += 1
                 if upcoming_tournaments_counter == 1:
                     # TODO: Later we will play with borders and fonts:
@@ -69,6 +90,7 @@ class UpcomingMatchesViewer(tk.Tk):
                 tournament_tier = tk.Label(tier_frame, text=f'{tournament.tier}')
                 tournament_start_time_local = tk.Label(start_time_local_frame, text=f'{start_time_local}')
                 tournament_date = tk.Label(timedelta_frame, text=f'{timedelta}')
+                self.countdown_upcoming_tournaments_labels.append(tournament_date)
                 tournament_prize = tk.Label(prize_frame, text=f'{tournament.prize}')
                 tournament_participants_number = tk.Label(participants_frame, text=f'{tournament.participants_number}')
                 tournament_location = tk.Label(location_frame, text=f'{tournament.location}')
@@ -125,6 +147,8 @@ class UpcomingMatchesViewer(tk.Tk):
                 timedelta = self.__td_format(game.start_datetime_local - datetime.now())
                 game_activity_status = tk.Label(activity_status_frame, text=f'{timedelta}', bg='lightblue')
                 game_activity_status.pack(side="top", anchor="w")
+                self.countdown_games.append(game)
+                self.countdown_games_labels.append(game_activity_status)
         if not game_counter:
             self.no_live_games_label = tk.Label(live_tournament_frame, text="There are no any upcoming or live games.")
             self.no_live_games_label.pack(side="left", anchor="w")
@@ -132,22 +156,15 @@ class UpcomingMatchesViewer(tk.Tk):
     def __td_format(self, td_object, game_flag=1):
         seconds = int(td_object.total_seconds())
         periods = [('year', 60*60*24*365), ('month', 60*60*24*30),
-                   ('day', 60*60*24), ('hour', 60*60), ('minute', 60)]
+                   ('day', 60*60*24), ('hour', 60*60), ('minute', 60), ('second', 1)]
 
         strings = []
-        if game_flag:
-            for period_name, period_seconds in periods:
-                if seconds > period_seconds:
-                    period_value , seconds = divmod(seconds, period_seconds)
-                    has_s = 's' if period_value > 1 else ''
-                    strings.append("%s %s%s" % (period_value, period_name, has_s))
-        else:
-            for period_name, period_seconds in periods[:-2]:
-                if seconds > period_seconds:
-                    period_value , seconds = divmod(seconds, period_seconds)
-                    has_s = 's' if period_value > 1 else ''
-                    strings.append("%s %s%s" % (period_value, period_name, has_s))
-
+#        periods = periods if game_flag else periods[:-3]
+        for period_name, period_seconds in periods:
+            if seconds > period_seconds:
+                period_value , seconds = divmod(seconds, period_seconds)
+                has_s = 's' if period_value > 1 else ''
+                strings.append("%s %s%s" % (period_value, period_name, has_s))
         return ", ".join(strings)
 
     def __activity_status(self, object, game_flag=1):
