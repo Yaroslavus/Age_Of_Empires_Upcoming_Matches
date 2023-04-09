@@ -35,8 +35,7 @@ class UpcomingMatchesViewer(tk.Tk):
         self.live_tournaments_frame = tk.LabelFrame(self.main_frame, text="Live tournaments")
         self.live_tournaments_frame.pack(side="top", fill="both", expand=True, padx=10)
         self.main_container = AOE_UMC.MainContainerManager(AOE_UMC.MainPageParser())
-        self.nearest_game, self.nearest_tournament = self.main_container.all_games[-1], self.main_container.all_tournaments[-1]
-        self.time_to_next_refresh = int((self.nearest_game.finish_datetime_local - datetime.now()).total_seconds())
+        self.time_to_next_refresh = int((self.main_container.nearest_object.start_datetime_local - datetime.now()).total_seconds())
         self.countdown_upcoming_tournaments_labels = []
         self.countdown_upcoming_tournaments = []
         self.countdown_games_labels = []
@@ -54,6 +53,7 @@ class UpcomingMatchesViewer(tk.Tk):
         for game, countdown_label in list(zip(self.countdown_games, self.countdown_games_labels)):
             if (self.__activity_status(game, 1) == "LIVE!") and (countdown_label.cget("text") != "LIVE!"):
                 countdown_label.config(text = "LIVE!")
+                countdown_label.config(bg="red")
             elif self.__activity_status(game, 1)  == "Soon":
                 timedelta = self.__td_format(game.start_datetime_local - datetime.now())
                 countdown_label.config(text = f'{timedelta}')
@@ -179,3 +179,8 @@ class UpcomingMatchesViewer(tk.Tk):
 
 if __name__ == "__main__":
     UpcomingMatchesViewer().mainloop()
+#    import cProfile, pstats
+#    cProfile.run("UpcomingMatchesViewer().mainloop()", "{}.profile".format(__file__))
+#    s = pstats.Stats("{}.profile".format(__file__))
+#    s.strip_dirs()
+#    s.sort_stats("time").print_stats(10)

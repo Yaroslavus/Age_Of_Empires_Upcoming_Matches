@@ -18,8 +18,8 @@ class Tournament:
     prize: str = None
     participants_number: str = None
     location: str = None
-    winner: str = None
-    runner_up: str = None
+    # winner: str = None
+    # runner_up: str = None
     start_datetime_local: datetime = None
     finish_datetime_local: datetime = None
     def __hash__(self):
@@ -46,10 +46,10 @@ class MainPageParser(HTMLParser):
         self.AOE_liquipedia_URL = self.AOE_liquipedia_prefix + "/ageofempires/Age_of_Empires_II"
         self._location_flag = False
         self._participants_flag = False
-        self._runner_up_flag = False
+        # self._runner_up_flag = False
         self._date_flag = False
         self._prize_flag = False
-        self._winner_flag = False
+        # self._winner_flag = False
         super().__init__(*args, **kwargs)
         self.feed(self.read_site_content())
 
@@ -108,13 +108,13 @@ class MainPageParser(HTMLParser):
             self.TOURNAMENTS[-1].location = data
             self._location_flag = False
 
-        if self._winner_flag:
-            self.TOURNAMENTS[-1].winner = data
-            self._winner_flag = False
+        # if self._winner_flag:
+        #     self.TOURNAMENTS[-1].winner = data
+        #     self._winner_flag = False
 
-        if self._runner_up_flag:
-            self.TOURNAMENTS[-1].runner_up = data
-            self._runner_up_flag = False
+        # if self._runner_up_flag:
+        #     self.TOURNAMENTS[-1].runner_up = data
+        #     self._runner_up_flag = False
 
     def handle_starttag(self, tag, attrs):
         if (not self._tagStack) and (tag == 'div') and (attrs == [("class", "divRow")]):
@@ -132,10 +132,10 @@ class MainPageParser(HTMLParser):
                 self._participants_flag = True
             elif (attrs == [("class", "divCell EventDetails Location Header")]):
                 self._location_flag = True
-            elif (attrs == [("class", "divCell Placement FirstPlace")]):
-                self._winner_flag = True
-            elif (attrs == [("class", "divCell Placement SecondPlace")]):
-                self._runner_up_flag = True
+            # elif (attrs == [("class", "divCell Placement FirstPlace")]):
+            #     self._winner_flag = True
+            # elif (attrs == [("class", "divCell Placement SecondPlace")]):
+            #     self._runner_up_flag = True
             self.__handle_tourhament_data(tag, attrs)
 
     def handle_endtag(self, endTag):
@@ -244,22 +244,20 @@ class TournamentPageParser(HTMLParser):
 class MainContainerManager:
     def __init__(self, tournaments):
         self.tournaments = tournaments
-        self.all_tournaments_dict, self.all_tournaments, self.all_games = self.__get_main_containers()
+        self.all_tournaments_dict, self.nearest_object = self.__get_main_containers()
 
     def __get_main_containers(self):
         all_tournaments_dict = {}
-        all_tournaments = []
-        all_games = []
+        infinity_future = datetime(2100, 1, 1, 0, 0, 0)
+        nearest_object = Game(start_datetime_local = infinity_future)
+        time_now = datetime.now()
         for tournament in self.tournaments.TOURNAMENTS:
-            all_tournaments.append(tournament)
-            games = TournamentPageParser(tournament.link)
-            all_tournaments_dict[tournament] = games.GAMES
-            all_games += games.GAMES
-        all_games = self.__sort_by_starttime(all_games)
-        all_tournaments = self.__sort_by_starttime(all_tournaments)
-        return all_tournaments_dict, all_tournaments, all_games
-
-    def __sort_by_starttime(self, list_to_sort):
-# Sort in the DESCENT order. So the nearest game is in the end of the list
-        list_to_sort.sort(key=lambda x: x.start_datetime_local, reverse=True)
-        return list_to_sort
+            if tournament.finish_datetime_local > datetime.now():
+                games = TournamentPageParser(tournament.link)
+                all_tournaments_dict[tournament] = games.GAMES
+                for game in games.GAMES:
+                    if (game.start_datetime_local < nearest_object.start_datetime_local) and (game.start_datetime_local > time_now):
+                        nearest_object = game
+                if (tournament.start_datetime_local < nearest_object.start_datetime_local) and (tournament.start_datetime_local > time_now):
+                    nearest_object = tournament
+        return all_tournaments_dict, nearest_object
