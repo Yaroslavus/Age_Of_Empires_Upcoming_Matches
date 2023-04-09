@@ -1,26 +1,37 @@
 import tkinter as tk
-from datetime import datetime, timedelta
+from datetime import datetime
 from tkinter.messagebox import askyesno
 import AOE_UMC
+import webbrowser
+import tkinter.font as tkFont
 
 
 class UpcomingMatchesViewer(tk.Tk):
     def __init__(self):
         tk.Tk.__init__(self)
+        self.winfo_toplevel().title("Age Of Empires 2 Upcoming Matches")
+
         self.master_frames_border_width = 2
         self.slave_frames_border_width = 0
         self.time_to_next_refresh = float("inf")
-        self.winfo_toplevel().title("Age Of Empires 2 Upcoming Matches")
         self.main_frame = tk.LabelFrame(self, text="Age Of Empires 2 Upcoming Matches", bd=self.master_frames_border_width)
         self.main_frame.pack(side="top", fill="both", expand=True, padx=10, pady=10)
-        self.refresh_button = tk.Button(self.main_frame, text="Refresh all Information (takes about 30 sec)", command=lambda: self.__manual_refresh())
-        self.refresh_button.pack(side="top", padx=10, pady=10, anchor='nw')
+        self.head_frame = tk.Frame(self.main_frame, bd=self.slave_frames_border_width)
+        self.head_frame.pack(side="top", fill="both", padx=10)
+        self.refresh_button = tk.Button(self.head_frame, text="Refresh all Information (takes about 30 sec)", command=lambda: self.__manual_refresh())
+        self.refresh_button.pack(side="left", padx=10, anchor='w')
+        self.main_URL_label = tk.Label(self.head_frame, text="Main tornaments", cursor="hand2")
+        self.main_URL_label.pack(side="left", padx=10, anchor='w')
+        self.__Label_to_URL(self.main_URL_label, "https://liquipedia.net/ageofempires/Age_of_Empires_II")
+        self.even_more_main_URL_label = tk.Label(self.head_frame, text="Even more tornaments", cursor="hand2")
+        self.even_more_main_URL_label.pack(side="left", padx=10, anchor='w')
+        self.__Label_to_URL(self.even_more_main_URL_label, "https://liquipedia.net/ageofempires/Age_of_Empires_II/Tournaments/Post_2020")
+        self.clock_label = tk.Label(self.head_frame, text="")
+        self.clock_label.pack(side="left", padx=10, anchor='e')
         self.upcoming_tournaments_frame = tk.LabelFrame(self.main_frame, text="Upcoming tournaments", bd=self.master_frames_border_width)
         self.upcoming_tournaments_frame.pack(side="top", fill="both", expand=True, padx=10, pady=10)
         self.live_tournaments_frame = tk.LabelFrame(self.main_frame, text="Live tournaments", bd=self.master_frames_border_width)
         self.live_tournaments_frame.pack(side="top", fill="both", expand=True, padx=10)
-#        self.finished_tournaments_frame = tk.LabelFrame(self.main_frame, text="Finished tournaments", bd=self.master_frames_border_width)
-#        self.finished_tournaments_frame.pack(side="top", fill="both", expand=True, padx=10, pady=10)
         self.__large_period_refresh()
 
     def __manual_refresh(self):
@@ -28,8 +39,11 @@ class UpcomingMatchesViewer(tk.Tk):
             self.__full_refresh()
 
     def __full_refresh(self):
+        self.clock_label.destroy()
         self.upcoming_tournaments_frame.destroy()
         self.live_tournaments_frame.destroy()
+        self.clock_label = tk.Label(self.head_frame, text = datetime.now().strftime("%d.%m.%y  %H:%M:%S"))
+        self.clock_label.pack(side="left", fill="both", expand=True, padx=10, pady=10)
         self.upcoming_tournaments_frame = tk.LabelFrame(self.main_frame, text="Upcoming tournaments")
         self.upcoming_tournaments_frame.pack(side="top", fill="both", expand=True, padx=10, pady=10)
         self.live_tournaments_frame = tk.LabelFrame(self.main_frame, text="Live tournaments")
@@ -60,6 +74,7 @@ class UpcomingMatchesViewer(tk.Tk):
         for upcoming_tournament, upcoming_tournament_countdown_label in list(zip(self.countdown_upcoming_tournaments, self.countdown_upcoming_tournaments_labels)):
                 timedelta = self.__td_format(upcoming_tournament.start_datetime_local - datetime.now())
                 upcoming_tournament_countdown_label.config(text = f'{timedelta}')
+        self.clock_label.config(text = datetime.now().strftime("%d.%m.%y  %H:%M:%S"))
 
     def __fill_upcoming_tournaments(self):
         upcoming_tournaments_counter = 0
@@ -68,8 +83,8 @@ class UpcomingMatchesViewer(tk.Tk):
                 self.countdown_upcoming_tournaments.append(tournament)
                 upcoming_tournaments_counter += 1
                 if upcoming_tournaments_counter == 1:
-                    # TODO: Later we will play with borders and fonts:
-                    # title_frame = tk.LabelFrame(self.upcoming_tournaments_frame, text="Title", font= ('Helvetica 14 bold'), bd= 0)
+                    # TODO: Later we will play with fonts:
+                    # title_frame = tk.LabelFrame(self.upcoming_tournaments_frame, text="Title", font= ('Helvetica 14 bold'))
                     title_frame = tk.LabelFrame(self.upcoming_tournaments_frame, text="Title", bd=self.slave_frames_border_width)
                     tier_frame = tk.LabelFrame(self.upcoming_tournaments_frame, text="Tier", bd=self.slave_frames_border_width)
                     start_time_local_frame = tk.LabelFrame(self.upcoming_tournaments_frame, text="Local Start Date", bd=self.slave_frames_border_width)
@@ -86,7 +101,8 @@ class UpcomingMatchesViewer(tk.Tk):
                     location_frame.pack(side="left", fill="both", expand=True, padx=10)
                 start_time_local = tournament.start_datetime_local.strftime("%d.%m.%y")
                 timedelta = self.__td_format(tournament.start_datetime_local - datetime.now(), game_flag=0)
-                tournament_title = tk.Label(title_frame, text=f'{tournament.title}')
+                tournament_title = tk.Label(title_frame, text=f'{tournament.title}', cursor="hand2")
+                self.__Label_to_URL(tournament_title, tournament.link)
                 tournament_tier = tk.Label(tier_frame, text=f'{tournament.tier}')
                 tournament_start_time_local = tk.Label(start_time_local_frame, text=f'{start_time_local}')
                 tournament_date = tk.Label(timedelta_frame, text=f'{timedelta}')
@@ -106,14 +122,13 @@ class UpcomingMatchesViewer(tk.Tk):
             self.no_upcoming_tours_label.pack(side="left", anchor="w")
 
     def __fill_live_tournaments(self):
-#        live_tournaments_frames = []
         live_tournaments_counter = 0
         for row, (tournament, games_list) in enumerate(self.main_container.all_tournaments_dict.items()):
             if self.__activity_status(tournament, 0) == "LIVE!":
-                live_tournament_frame = tk.LabelFrame(self.live_tournaments_frame, text=f'{tournament.title}\t{tournament.date}\t{tournament.tier}', bd=self.master_frames_border_width)
+                live_tournament_frame = tk.LabelFrame(self.live_tournaments_frame, text=f'{tournament.title}\t{tournament.date}\t{tournament.tier}', bd=self.master_frames_border_width, cursor="hand2")
                 live_tournament_frame.pack(side="top", fill="both", expand=True, padx=20, pady=10)
+                self.__Label_to_URL(live_tournament_frame, tournament.link)
                 live_tournaments_counter += 1
-#                live_tournaments_frames.append(live_tournament_frame)
                 self.__fill_live_tournament_with_games(games_list, live_tournament_frame)
         if not live_tournaments_counter:
             self.no_live_tours_label = tk.Label(self.live_tournaments_frame, text="There are no any live tournaments.")
@@ -130,10 +145,24 @@ class UpcomingMatchesViewer(tk.Tk):
                 start_time_local_frame = tk.LabelFrame(live_tournament_frame, text="Local Start Time", width=tournament_frame_width/4, bd=self.slave_frames_border_width)
                 activity_status_frame = tk.LabelFrame(live_tournament_frame, text="Activity Status", width=tournament_frame_width/4, bd=self.slave_frames_border_width)
                 stage_frame = tk.LabelFrame(live_tournament_frame, text="Stage", width=tournament_frame_width/4, bd=self.slave_frames_border_width)
-                teams_frame.pack(side="left", fill="both", expand=True, padx=20)
-                start_time_local_frame.pack(side="left", fill="both", expand=True, padx=10)
-                activity_status_frame.pack(side="left", fill="both", expand=True, padx=10)
-                stage_frame.pack(side="left", fill="both", expand=True, padx=10)
+
+                for c in range(4): live_tournament_frame.columnconfigure(index=c, weight=1)
+
+                # teams_frame.pack(side="left", fill="both", expand=True, padx=20)
+                # start_time_local_frame.pack(side="left", fill="both", expand=True, padx=10)
+                # activity_status_frame.pack(side="left", fill="both", expand=True, padx=10)
+                # stage_frame.pack(side="left", fill="both", expand=True, padx=10)
+
+                # teams_frame.place(relx=0, relwidth=tournament_frame_width/4, relheight=1)
+                # start_time_local_frame.place(relx=0.25, relwidth=tournament_frame_width/4, relheight=1)
+                # activity_status_frame.place(relx=0.5, relwidth=tournament_frame_width/4, relheight=1)
+                # stage_frame.place(relx=0.75, relwidth=tournament_frame_width/4, relheight=1)
+
+                teams_frame.grid(row=row, column=0, sticky='nesw')
+                start_time_local_frame.grid(row=row, column=1, sticky='nesw')
+                activity_status_frame.grid(row=row, column=2, sticky='nesw')
+                stage_frame.grid(row=row, column=3, sticky='nesw')
+
             game_title = tk.Label(teams_frame, text=f'{game.team_1} vs. {game.team_2}')
             game_time = tk.Label(start_time_local_frame, text=f'{start_time_local}')
             game_stage = tk.Label(stage_frame, text=f'{game.stage}')
@@ -175,6 +204,19 @@ class UpcomingMatchesViewer(tk.Tk):
             return "Soon"
         elif (now > object.finish_datetime_local):
             return "Started more than 4 hours ago" if game_flag else "Finished"
+
+    def __callback(self, url):
+        webbrowser.open_new_tab(url)
+
+    def __underline(self, widget, underline):
+        f = tkFont.Font(widget, widget.cget("font"))
+        f.configure(underline = underline)
+        widget.configure(font=f)
+
+    def __Label_to_URL(self, widget, link):
+        widget.bind("<Button-1>", lambda e: self.__callback(link))
+        widget.bind("<Enter>", lambda e: self.__underline(widget, underline=True))
+        widget.bind("<Leave>", lambda e: self.__underline(widget, underline=False))
 
 
 if __name__ == "__main__":
