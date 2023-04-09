@@ -18,8 +18,6 @@ class Tournament:
     prize: str = None
     participants_number: str = None
     location: str = None
-    # winner: str = None
-    # runner_up: str = None
     start_datetime_local: datetime = None
     finish_datetime_local: datetime = None
     def __hash__(self):
@@ -46,10 +44,8 @@ class MainPageParser(HTMLParser):
         self.AOE_liquipedia_URL = self.AOE_liquipedia_prefix + "/ageofempires/Age_of_Empires_II"
         self._location_flag = False
         self._participants_flag = False
-        # self._runner_up_flag = False
         self._date_flag = False
         self._prize_flag = False
-        # self._winner_flag = False
         super().__init__(*args, **kwargs)
         self.feed(self.read_site_content())
 
@@ -108,14 +104,6 @@ class MainPageParser(HTMLParser):
             self.TOURNAMENTS[-1].location = data
             self._location_flag = False
 
-        # if self._winner_flag:
-        #     self.TOURNAMENTS[-1].winner = data
-        #     self._winner_flag = False
-
-        # if self._runner_up_flag:
-        #     self.TOURNAMENTS[-1].runner_up = data
-        #     self._runner_up_flag = False
-
     def handle_starttag(self, tag, attrs):
         if (not self._tagStack) and (tag == 'div') and (attrs == [("class", "divRow")]):
             self._tagStack = []
@@ -132,10 +120,6 @@ class MainPageParser(HTMLParser):
                 self._participants_flag = True
             elif (attrs == [("class", "divCell EventDetails Location Header")]):
                 self._location_flag = True
-            # elif (attrs == [("class", "divCell Placement FirstPlace")]):
-            #     self._winner_flag = True
-            # elif (attrs == [("class", "divCell Placement SecondPlace")]):
-            #     self._runner_up_flag = True
             self.__handle_tourhament_data(tag, attrs)
 
     def handle_endtag(self, endTag):
