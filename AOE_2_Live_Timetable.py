@@ -10,29 +10,28 @@ class UpcomingMatchesViewer(tk.Tk):
     def __init__(self):
         tk.Tk.__init__(self)
         self.winfo_toplevel().title("Age Of Empires 2 Upcoming Matches")
-
-        self.master_frames_border_width = 2
-        self.slave_frames_border_width = 0
         self.time_to_next_refresh = float("inf")
-        self.main_frame = tk.LabelFrame(self, text="Age Of Empires 2 Upcoming Matches", bd=self.master_frames_border_width)
-        self.main_frame.pack(side="top", fill="both", expand=True, padx=10, pady=10)
-        self.head_frame = tk.Frame(self.main_frame, bd=self.slave_frames_border_width)
-        self.head_frame.pack(side="top", fill="both", padx=10)
+        self.main_frame = tk.LabelFrame(self, text="Age Of Empires 2 Upcoming Matches", bd=2)
+        self.main_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        self.head_frame = tk.Frame(self.main_frame, bd=0)
+        self.head_frame.pack(fill="x", padx=10, pady=10)
+        self.__set_head_frame()
+        self.upcoming_tournaments_frame = tk.LabelFrame(self.main_frame, text="Upcoming tournaments", bd=2)
+        self.upcoming_tournaments_frame.pack(fill="both", expand=False, padx=10, pady=10)
+        self.live_tournaments_frame = tk.LabelFrame(self.main_frame, text="Live tournaments", bd=2)
+        self.live_tournaments_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        self.__large_period_refresh()
+
+    def __set_head_frame(self):
         self.refresh_button = tk.Button(self.head_frame, text="Refresh all Information (takes about 30 sec)", command=lambda: self.__manual_refresh())
-        self.refresh_button.pack(side="left", padx=10, anchor='w')
         self.main_URL_label = tk.Label(self.head_frame, text="Main tornaments", cursor="hand2")
-        self.main_URL_label.pack(side="left", padx=10, anchor='w')
         self.__Label_to_URL(self.main_URL_label, "https://liquipedia.net/ageofempires/Age_of_Empires_II")
         self.even_more_main_URL_label = tk.Label(self.head_frame, text="Even more tornaments", cursor="hand2")
-        self.even_more_main_URL_label.pack(side="left", padx=10, anchor='w')
         self.__Label_to_URL(self.even_more_main_URL_label, "https://liquipedia.net/ageofempires/Age_of_Empires_II/Tournaments/Post_2020")
-        self.clock_label = tk.Label(self.head_frame, text="")
-        self.clock_label.pack(side="left", padx=10, anchor='e')
-        self.upcoming_tournaments_frame = tk.LabelFrame(self.main_frame, text="Upcoming tournaments", bd=self.master_frames_border_width)
-        self.upcoming_tournaments_frame.pack(side="top", fill="both", expand=True, padx=10, pady=10)
-        self.live_tournaments_frame = tk.LabelFrame(self.main_frame, text="Live tournaments", bd=self.master_frames_border_width)
-        self.live_tournaments_frame.pack(side="top", fill="both", expand=True, padx=10)
-        self.__large_period_refresh()
+        for object in (self.refresh_button, self.main_URL_label, self.even_more_main_URL_label):
+            object.pack(side="left", padx=10, pady=10)
+        self.clock_label = tk.Label(self.head_frame, text="", anchor='e')
+        self.clock_label.pack(side="right", padx=10, pady=10)
 
     def __manual_refresh(self):
         if askyesno(title="Full Refreshing", message="Do you really want to refresh the form?"):
@@ -43,11 +42,11 @@ class UpcomingMatchesViewer(tk.Tk):
         self.upcoming_tournaments_frame.destroy()
         self.live_tournaments_frame.destroy()
         self.clock_label = tk.Label(self.head_frame, text = datetime.now().strftime("%d.%m.%y  %H:%M:%S"))
-        self.clock_label.pack(side="left", fill="both", expand=True, padx=10, pady=10)
+        self.clock_label.pack(side="right", padx=10, pady=10)
         self.upcoming_tournaments_frame = tk.LabelFrame(self.main_frame, text="Upcoming tournaments")
-        self.upcoming_tournaments_frame.pack(side="top", fill="both", expand=True, padx=10, pady=10)
+        self.upcoming_tournaments_frame.pack(fill="both", expand=False, padx=10, pady=10)
         self.live_tournaments_frame = tk.LabelFrame(self.main_frame, text="Live tournaments")
-        self.live_tournaments_frame.pack(side="top", fill="both", expand=True, padx=10)
+        self.live_tournaments_frame.pack(fill="both", expand=True, padx=10, pady=10)
         self.main_container = AOE_UMC.MainContainerManager(AOE_UMC.MainPageParser())
         self.time_to_next_refresh = int((self.main_container.nearest_object.start_datetime_local - datetime.now()).total_seconds())
         self.countdown_upcoming_tournaments_labels = []
@@ -77,6 +76,8 @@ class UpcomingMatchesViewer(tk.Tk):
         self.clock_label.config(text = datetime.now().strftime("%d.%m.%y  %H:%M:%S"))
 
     def __fill_upcoming_tournaments(self):
+        self.upcoming_tournaments_frame.columnconfigure(index=0, weight=2)
+        for c in range(1, 7): self.upcoming_tournaments_frame.columnconfigure(index=c, weight=1)
         upcoming_tournaments_counter = 0
         for row, tournament in enumerate(self.main_container.all_tournaments_dict.keys()):
             if self.__activity_status(tournament, 0) == "Soon":
@@ -85,20 +86,17 @@ class UpcomingMatchesViewer(tk.Tk):
                 if upcoming_tournaments_counter == 1:
                     # TODO: Later we will play with fonts:
                     # title_frame = tk.LabelFrame(self.upcoming_tournaments_frame, text="Title", font= ('Helvetica 14 bold'))
-                    title_frame = tk.LabelFrame(self.upcoming_tournaments_frame, text="Title", bd=self.slave_frames_border_width)
-                    tier_frame = tk.LabelFrame(self.upcoming_tournaments_frame, text="Tier", bd=self.slave_frames_border_width)
-                    start_time_local_frame = tk.LabelFrame(self.upcoming_tournaments_frame, text="Local Start Date", bd=self.slave_frames_border_width)
-                    timedelta_frame = tk.LabelFrame(self.upcoming_tournaments_frame, text="Time to start", bd=self.slave_frames_border_width)
-                    prize_frame = tk.LabelFrame(self.upcoming_tournaments_frame, text="Prize", bd=self.slave_frames_border_width)
-                    participants_frame = tk.LabelFrame(self.upcoming_tournaments_frame, text="Participants Number", bd=self.slave_frames_border_width)
-                    location_frame = tk.LabelFrame(self.upcoming_tournaments_frame, text="Location", bd=self.slave_frames_border_width)
-                    title_frame.pack(side="left", fill="both", expand=True, padx=20)
-                    tier_frame.pack(side="left", fill="both", expand=True, padx=10)
-                    start_time_local_frame.pack(side="left", fill="both", expand=True, padx=10)
-                    timedelta_frame.pack(side="left", fill="both", expand=True, padx=10)
-                    prize_frame.pack(side="left", fill="both", expand=True, padx=10)
-                    participants_frame.pack(side="left", fill="both", expand=True, padx=10)
-                    location_frame.pack(side="left", fill="both", expand=True, padx=10)
+                    title_frame = tk.LabelFrame(self.upcoming_tournaments_frame, text="Title", bd=0)
+                    tier_frame = tk.LabelFrame(self.upcoming_tournaments_frame, text="Tier", bd=0)
+                    start_time_local_frame = tk.LabelFrame(self.upcoming_tournaments_frame, text="Local Start Date", bd=0)
+                    timedelta_frame = tk.LabelFrame(self.upcoming_tournaments_frame, text="Time to start", bd=0)
+                    prize_frame = tk.LabelFrame(self.upcoming_tournaments_frame, text="Prize", bd=0)
+                    participants_frame = tk.LabelFrame(self.upcoming_tournaments_frame, text="Participants Number", bd=0)
+                    location_frame = tk.LabelFrame(self.upcoming_tournaments_frame, text="Location", bd=0)
+                    for i, frame in enumerate(iter([title_frame, tier_frame, start_time_local_frame,
+                                                    timedelta_frame, prize_frame, participants_frame,
+                                                    location_frame])):
+                        frame.grid(row=row, column=i, padx=20, sticky='nw')
                 start_time_local = tournament.start_datetime_local.strftime("%d.%m.%y")
                 timedelta = self.__td_format(tournament.start_datetime_local - datetime.now(), game_flag=0)
                 tournament_title = tk.Label(title_frame, text=f'{tournament.title}', cursor="hand2")
@@ -110,83 +108,63 @@ class UpcomingMatchesViewer(tk.Tk):
                 tournament_prize = tk.Label(prize_frame, text=f'{tournament.prize}')
                 tournament_participants_number = tk.Label(participants_frame, text=f'{tournament.participants_number}')
                 tournament_location = tk.Label(location_frame, text=f'{tournament.location}')
-                tournament_title.pack(side="top", anchor="w")
-                tournament_tier.pack(side="top", anchor="w")
-                tournament_start_time_local.pack(side="top", anchor="w")
-                tournament_date.pack(side="top", anchor="w")
-                tournament_prize.pack(side="top", anchor="w")
-                tournament_participants_number.pack(side="top", anchor="w")
-                tournament_location.pack(side="top", anchor="w")
+                for i, label in enumerate(iter([tournament_title, tournament_tier, tournament_start_time_local,
+                                                tournament_date, tournament_prize, tournament_participants_number,
+                                                tournament_location])):
+                        label.grid(row=row, column=i, padx=10, sticky='nw')
         if not upcoming_tournaments_counter:
             self.no_upcoming_tours_label = tk.Label(self.upcoming_tournaments_frame, text="There are no any upcoming tournaments.")
-            self.no_upcoming_tours_label.pack(side="left", anchor="w")
+            self.no_upcoming_tours_label.pack(side="left", fill="x", padx=10)
 
     def __fill_live_tournaments(self):
         live_tournaments_counter = 0
-        for row, (tournament, games_list) in enumerate(self.main_container.all_tournaments_dict.items()):
+        for tournament, games_list in self.main_container.all_tournaments_dict.items():
             if self.__activity_status(tournament, 0) == "LIVE!":
-                live_tournament_frame = tk.LabelFrame(self.live_tournaments_frame, text=f'{tournament.title}\t{tournament.date}\t{tournament.tier}', bd=self.master_frames_border_width, cursor="hand2")
-                live_tournament_frame.pack(side="top", fill="both", expand=True, padx=20, pady=10)
+                live_tournament_frame = tk.LabelFrame(self.live_tournaments_frame, text=f'{tournament.title}\t{tournament.date}\t{tournament.tier}', bd=2, cursor="hand2")
+                live_tournament_frame.pack(fill="both", expand=True, padx=20, pady=10)
                 self.__Label_to_URL(live_tournament_frame, tournament.link)
                 live_tournaments_counter += 1
                 self.__fill_live_tournament_with_games(games_list, live_tournament_frame)
         if not live_tournaments_counter:
             self.no_live_tours_label = tk.Label(self.live_tournaments_frame, text="There are no any live tournaments.")
-            self.no_upcoming_tours_label.pack(side="left", anchor="w")
+            self.no_live_tours_label.grid(row=0, column=0, padx=10, sticky="w")
 
     def __fill_live_tournament_with_games(self, games_list, live_tournament_frame):
         game_counter = 0
-        tournament_frame_width = live_tournament_frame.winfo_width()
-        for row, game in enumerate(games_list):
+        for game in games_list:
             start_time_local = game.start_datetime_local.strftime("%d.%m.%y %H:%M")
             game_counter += 1
             if game_counter == 1:
-                teams_frame = tk.LabelFrame(live_tournament_frame, text="Game", width=tournament_frame_width/4, bd=self.slave_frames_border_width)
-                start_time_local_frame = tk.LabelFrame(live_tournament_frame, text="Local Start Time", width=tournament_frame_width/4, bd=self.slave_frames_border_width)
-                activity_status_frame = tk.LabelFrame(live_tournament_frame, text="Activity Status", width=tournament_frame_width/4, bd=self.slave_frames_border_width)
-                stage_frame = tk.LabelFrame(live_tournament_frame, text="Stage", width=tournament_frame_width/4, bd=self.slave_frames_border_width)
-
-                for c in range(4): live_tournament_frame.columnconfigure(index=c, weight=1)
-
-                # teams_frame.pack(side="left", fill="both", expand=True, padx=20)
-                # start_time_local_frame.pack(side="left", fill="both", expand=True, padx=10)
-                # activity_status_frame.pack(side="left", fill="both", expand=True, padx=10)
-                # stage_frame.pack(side="left", fill="both", expand=True, padx=10)
-
-                # teams_frame.place(relx=0, relwidth=tournament_frame_width/4, relheight=1)
-                # start_time_local_frame.place(relx=0.25, relwidth=tournament_frame_width/4, relheight=1)
-                # activity_status_frame.place(relx=0.5, relwidth=tournament_frame_width/4, relheight=1)
-                # stage_frame.place(relx=0.75, relwidth=tournament_frame_width/4, relheight=1)
-
-                teams_frame.grid(row=row, column=0, sticky='nesw')
-                start_time_local_frame.grid(row=row, column=1, sticky='nesw')
-                activity_status_frame.grid(row=row, column=2, sticky='nesw')
-                stage_frame.grid(row=row, column=3, sticky='nesw')
-
+                for c in range(4): live_tournament_frame.columnconfigure(index=c, weight=1, uniform="group1")
+                teams_frame = tk.LabelFrame(live_tournament_frame, text="Game", bd=0)
+                start_time_local_frame = tk.LabelFrame(live_tournament_frame, text="Local Start Time", bd=0)
+                activity_status_frame = tk.LabelFrame(live_tournament_frame, text="Activity Status", bd=0)
+                stage_frame = tk.LabelFrame(live_tournament_frame, text="Stage", bd=0)
+                for i, frame in enumerate(iter([teams_frame, start_time_local_frame,
+                                                activity_status_frame, stage_frame])):
+                        frame.grid(row=0, column=i, padx=20, pady=10, sticky='nesw')
             game_title = tk.Label(teams_frame, text=f'{game.team_1} vs. {game.team_2}')
             game_time = tk.Label(start_time_local_frame, text=f'{start_time_local}')
             game_stage = tk.Label(stage_frame, text=f'{game.stage}')
-            game_title.pack(side="top", anchor="w")
-            game_time.pack(side="top", anchor="w")
-            game_stage.pack(side="top", anchor="w")
+            for label in (game_title, game_time, game_stage):
+                label.pack(padx=10, anchor='nw')
             if self.__activity_status(game, 1)  == "LIVE!":
                 game_activity_status = tk.Label(activity_status_frame, text="LIVE!", bg='red')
-                game_activity_status.pack(side="top", anchor="w")
+                game_activity_status.pack(padx=10, anchor='nw')
             elif self.__activity_status(game, 1)  == "Soon":
                 timedelta = self.__td_format(game.start_datetime_local - datetime.now())
                 game_activity_status = tk.Label(activity_status_frame, text=f'{timedelta}', bg='lightblue')
-                game_activity_status.pack(side="top", anchor="w")
+                game_activity_status.pack(padx=10, anchor='nw')
                 self.countdown_games.append(game)
                 self.countdown_games_labels.append(game_activity_status)
         if not game_counter:
             self.no_live_games_label = tk.Label(live_tournament_frame, text="There are no any upcoming or live games.")
-            self.no_live_games_label.pack(side="left", anchor="w")
+            self.no_live_games_label.grid(row=0, column=0, padx=10, sticky="w")
 
     def __td_format(self, td_object, game_flag=1):
         seconds = int(td_object.total_seconds())
         periods = [('year', 60*60*24*365), ('month', 60*60*24*30),
-                   ('day', 60*60*24), ('hour', 60*60), ('minute', 60), ('second', 1)]
-
+                   ('day', 60*60*24), ('hour', 60*60), ('minute', 60)]
         strings = []
 #        periods = periods if game_flag else periods[:-3]
         for period_name, period_seconds in periods:
@@ -221,8 +199,3 @@ class UpcomingMatchesViewer(tk.Tk):
 
 if __name__ == "__main__":
     UpcomingMatchesViewer().mainloop()
-#    import cProfile, pstats
-#    cProfile.run("UpcomingMatchesViewer().mainloop()", "{}.profile".format(__file__))
-#    s = pstats.Stats("{}.profile".format(__file__))
-#    s.strip_dirs()
-#    s.sort_stats("time").print_stats(10)
