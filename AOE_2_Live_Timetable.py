@@ -84,8 +84,6 @@ class UpcomingMatchesViewer(tk.Tk):
                 self.countdown_upcoming_tournaments.append(tournament)
                 upcoming_tournaments_counter += 1
                 if upcoming_tournaments_counter == 1:
-                    # TODO: Later we will play with fonts:
-                    # title_frame = tk.LabelFrame(self.upcoming_tournaments_frame, text="Title", font= ('Helvetica 14 bold'))
                     title_frame = tk.LabelFrame(self.upcoming_tournaments_frame, text="Title", bd=0)
                     tier_frame = tk.LabelFrame(self.upcoming_tournaments_frame, text="Tier", bd=0)
                     start_time_local_frame = tk.LabelFrame(self.upcoming_tournaments_frame, text="Local Start Date", bd=0)
@@ -98,7 +96,7 @@ class UpcomingMatchesViewer(tk.Tk):
                                                     location_frame])):
                         frame.grid(row=row, column=i, padx=20, sticky='nw')
                 start_time_local = tournament.start_datetime_local.strftime("%d.%m.%y")
-                timedelta = self.__td_format(tournament.start_datetime_local - datetime.now(), game_flag=0)
+                timedelta = self.__td_format(tournament.start_datetime_local - datetime.now())
                 tournament_title = tk.Label(title_frame, text=f'{tournament.title}', cursor="hand2")
                 self.__Label_to_URL(tournament_title, tournament.link)
                 tournament_tier = tk.Label(tier_frame, text=f'{tournament.tier}')
@@ -161,12 +159,11 @@ class UpcomingMatchesViewer(tk.Tk):
             self.no_live_games_label = tk.Label(live_tournament_frame, text="There are no any upcoming or live games.")
             self.no_live_games_label.grid(row=0, column=0, padx=10, sticky="w")
 
-    def __td_format(self, td_object, game_flag=1):
+    def __td_format(self, td_object):
         seconds = int(td_object.total_seconds())
         periods = [('year', 60*60*24*365), ('month', 60*60*24*30),
                    ('day', 60*60*24), ('hour', 60*60), ('minute', 60)]
         strings = []
-#        periods = periods if game_flag else periods[:-3]
         for period_name, period_seconds in periods:
             if seconds > period_seconds:
                 period_value , seconds = divmod(seconds, period_seconds)
