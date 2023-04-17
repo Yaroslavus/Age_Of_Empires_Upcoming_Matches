@@ -173,7 +173,7 @@ class UpcomingMatchesViewer(tk.Tk):
 
     def __activity_status(self, object, game_flag=1):
         now = datetime.now()
-        if (now > object.start_datetime_local) and (now < object.finish_datetime_local):
+        if (now >= object.start_datetime_local) and (now <= object.finish_datetime_local):
             return "LIVE!"
         elif (now < object.start_datetime_local):
             return "Soon"
