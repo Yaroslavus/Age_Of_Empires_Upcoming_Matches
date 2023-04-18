@@ -8,8 +8,10 @@ With this application you can see:
 - - a list of games announced for the near future, and a countdown to their beginning;
 - What tournaments are expected in the future.
 
-For additional information before starting, you can look at the screenshot of the working version in this directory (AOE_2_Live_Timetable_Screenshot.png).
+For additional information before starting, you can look at the screenshot of the working version in this directory (AOE_2_Live_Timetable_Screenshot.png):
+
 ![AOE_2_Live_Timetable_Screenshot](https://user-images.githubusercontent.com/10959838/232637495-6dea7547-d451-4516-bc28-a8c78d61a7f0.png)
+
 Also, all tournaments are clickable, by clicking on the title of the tournament you can go to its page on liquipedia.net.
 
 2. What you should know:
